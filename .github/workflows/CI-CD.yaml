@@ -82,3 +82,4 @@ jobs:
           git add data/jobs_raw.csv data/jobs_clean.csv
           git commit -m "Weekly update of job data" || echo "No changes to commit"
           git push origin main
+          
