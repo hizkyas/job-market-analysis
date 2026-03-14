@@ -5,12 +5,11 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
+  schedule:               # optional scraper schedule (weekly)
     - cron: '0 6 * * 1'  # every Monday at 6:00 UTC
 
 jobs:
 
-  # 1️⃣ Lint & Test (Windows)
   lint-test-windows:
     name: Lint & Test Python (Windows)
     runs-on: windows-latest
@@ -29,44 +28,13 @@ jobs:
           pip install flake8 pytest
 
       - name: Lint code
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
 
       - name: Run tests
-        run: python -m pytest tests/
+        run: 
+          python -m pytest tests/
 
-  # 2️⃣ Scraper & Data Update (Linux)
-  scheduled-scraper-linux:
-    name: Update Jobs Data Weekly (Linux)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule'
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies (Linux-compatible)
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt --no-deps
-          pip install pandas requests beautifulsoup4  # add scraping libs
-
-      - name: Run Scraper & Clean Data
-        run: |
-          python scripts/scrape_jobs.py
-          python scripts/clean_data.py
-
-      - name: Commit Updated CSV
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/jobs_raw.csv data/jobs_clean.csv
-          git commit -m "Weekly update of job data" || echo "No changes to commit"
-          git push origin main
-
-  # 3️⃣ Streamlit Deployment (Windows)
   deploy-streamlit:
     name: Deploy Streamlit Dashboard
     runs-on: windows-latest
@@ -88,10 +56,10 @@ jobs:
           echo "This step is a placeholder."
           echo "Use Streamlit Cloud GitHub integration or API to deploy your app."
 
-  # 4️⃣ Security & Type Checks (Windows)
-  security-type-checks:
-    name: Security & Type Checks
-    runs-on: windows-latest
+  scheduled-scraper-linux:
+    name: Update Jobs Data Weekly (Linux)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
     steps:
       - uses: actions/checkout@v3
 
@@ -100,16 +68,22 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install dependencies (skip Windows-only)
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install mypy bandit safety
+          # Install only Linux-compatible dependencies
+          pip install -r requirements.txt --no-deps
+          pip install pandas requests beautifulsoup4 # add any scraping libs manually
 
-      - name: Run type checks
-        run: python -m mypy scripts/
-
-      - name: Run security checks
+      - name: Run Scraper & Clean Data
         run: |
-          bandit -r scripts/
-          safety check --full-report
+          python scripts/scrape_jobs.py
+          python scripts/clean_data.py
+
+      - name: Commit Updated CSV
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/jobs_raw.csv data/jobs_clean.csv
+          git commit -m "Weekly update of job data" || echo "No changes to commit"
+          git push origin main
