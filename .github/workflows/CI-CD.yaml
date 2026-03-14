@@ -33,8 +33,7 @@ jobs:
 
       - name: Run tests
         run: 
-          set PYTHONPATH=%CD%
-          pytest tests/
+          python -m pytest tests/
 
   deploy-streamlit:
     name: Deploy Streamlit Dashboard
